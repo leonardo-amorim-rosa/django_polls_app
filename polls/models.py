@@ -7,7 +7,14 @@ class Question(models.Model):
     pub_date = models.DateTimeField('date published')
 
     def was_published_recently(self):
+        """
+        => Primeira forma antes de criar testes unitário
         return self.pub_date >= timezone.now() - datetime.timedelta(days=1)
+
+        => Segunda forma (corrgida após o teste)
+        """
+        now = timezone.now()
+        return self.pub_date >= timezone.now() - datetime.timedelta(days=1) <= self.pub_date <= now
 
     def __str__(self):
         return self.question_text

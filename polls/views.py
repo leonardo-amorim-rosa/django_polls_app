@@ -1,72 +1,38 @@
+from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
-from django.http import HttpResponse, Http404, HttpResponseRedirect
-from django.template import loader
 from django.urls import reverse
+from django.views import generic
+from django.utils import timezone
 
-from .models import Question
-
-def index(request):
-    '''
-    => Primeira alteração
-    return HttpResponse("Hello World!!!")
-
-    => Segunda alteração
-    latest_question_list = Question.objects.order_by('-pub_date')[:5]
-    output = ', '.join([q.question_text for q in latest_question_list])
-    return HttpResponse(output)
-
-    => Terceira alteração
-    latest_question_list = Question.objects.order_by('-pub_date')[:5]
-    template = loader.get_template('polls/index.html')
-    context = {
-        'latest_question_list': latest_question_list,
-    }
-    return HttpResponse(template.render(context, request))
-
-    => Quarta alteração
-    '''
-    latest_question_list = Question.objects.order_by('-pub_date')[:5]
-    context = {'latest_question_list': latest_question_list}
-    return render(request, 'polls/index.html', context)
+from .models import Question, Choice
 
 
-def detail(request, question_id):
-    '''
-    => Primeira alteração
-    return HttpResponse("You're looking at question %s." % question_id)
+class IndexView(generic.ListView):
+    template_name = 'polls/index.html' # mudando o nome do template disponibilizado pela view, pois o padrão seria <model_name>_list.html
+    context_object_name = 'latest_question_list' # mudando o nome do objeto disponibilizado para o template
 
-    => Segunda forma
-    try:
-        question = Question.objects.get(pk=question_id)
-    except Question.DoesNotExist:
-        raise Http404("Question does not exist")
-    return render(request, 'polls/detail.html', {'question': question})
-
-    => Terceira forma
-    '''
-    question = get_object_or_404(Question, pk=question_id)
-    return render(request, 'polls/detail.html', {'question': question})
+    def get_queryset(self):
+        """Return the last five published questions (not including those set to be published in the future).."""
+        return Question.objects.filter(pub_date__lte=timezone.now()).order_by('-pub_date')[:5]
 
 
-def result(request, question_id):
-    '''
-    => Primeira forma
-    response = "You're looking at the results of question %s."
-    return HttpResponse(response % question_id)
+class DetailView(generic.DetailView):
+    model = Question # necessário especificar o model para o template de detalhe
+    template_name = 'polls/detail.html' # mudando o nome do template disponibilizado pela view, pois o padrão seria <model_name>_list.html
 
-    => Segunda forma
-    '''
-    question = get_object_or_404(Question, pk=question_id)
-    return render(request, 'polls/results.html', {'question':question})
+    def get_queryset(self):
+        """
+        Excludes any questions that aren't published yet.
+        """
+        return Question.objects.filter(pub_date__lte=timezone.now())
+        
+
+class ResultsView(generic.DetailView):
+    model = Question
+    template_name = 'polls/results.html'
 
 
 def vote(request, question_id):
-    '''
-    => Primeira forma
-    return HttpResponse("You're voting on question %s." % question_id)
-
-    => Segunda forma
-    '''
     question = get_object_or_404(Question, pk=question_id)
     try:
         selected_choice = question.choice_set.get(pk=request.POST['choice']) # request.POST is a dict like request.GET
